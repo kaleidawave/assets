@@ -1,0 +1,106 @@
+name: publish-external-assets
+run-name: Build assets for (external) projects
+
+on: push
+
+jobs:
+  build-and-upload-rust-binaries:
+    permissions: write-all
+
+    # TODO for other targets
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        repository:
+          - repository: https://github.com/kaleidawave/ezno
+            ref: parser-fixes
+            profile: release
+            name: ezno-feb-26
+          - repository: taiki-e/cargo-fuzz
+            ref: default-target
+            name: cargo-fuzz
+
+    env:
+      DEFAULT_PROFILE: dev
+      RELEASE_TAG: assets
+
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ matrix.repository.repository }}
+          ref: ${{ matrix.repository.ref || 'main' }}
+
+      - name: Build binary
+        run: cargo build --profile ${{ matrix.repository.profile || env.DEFAULT_PROFILE }}
+
+      - name: Publish binary
+        shell: bash
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: |
+          FROM='target/${{ case(matrix.repository.profile == 'release', 'release', 'debug') }}/${{ matrix.repository.name }}'
+          # TODO more
+          TO='${{ matrix.repository.name }}-${{ case(runner.arch == 'X86', 'x86_64', 'unknown') }}-${{ case(runner.os == 'Linux', 'unknown-linux', 'unknown') }}'
+          LABEL="$TO"
+          mv $FROM $TO
+          gh release upload $RELEASE_TAG "$TO#$LABEL" --clobber -R ${{ github.repository }}
+
+  build-and-upload-languages:
+    permissions: write-all
+
+    # TODO for other targets
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        repository:
+          - url: https://github.com/PrestonKnopp/tree-sitter-gdscript
+          - url: https://github.com/tree-sitter/tree-sitter-rust
+          - url: https://github.com/tree-sitter/tree-sitter-go
+          - url: https://github.com/tree-sitter/tree-sitter-regex
+          - url: https://github.com/tree-sitter/tree-sitter-typescript
+            path: typescript
+          - url: https://github.com/tree-sitter-grammars/tree-sitter-zig
+          - url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
+          - url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
+            path: tree-sitter-markdown
+          - url: https://github.com/DerekStride/tree-sitter-sql
+          - url: https://github.com/tree-sitter/tree-sitter-python
+          - url: https://github.com/Julian/tree-sitter-lean
+          - url: https://github.com/tree-sitter/tree-sitter-html
+          - url: https://github.com/tree-sitter/tree-sitter-c
+          - url: https://github.com/tree-sitter/tree-sitter-cpp
+          - url: https://github.com/tree-sitter/tree-sitter-bash
+          - url: https://github.com/tree-sitter/tree-sitter-json
+          - url: https://github.com/tree-sitter/tree-sitter-css
+          - url: https://github.com/tree-sitter/tree-sitter-toml
+          - url: https://github.com/tree-sitter/tree-sitter-tsq
+
+    steps:
+      - name: clone, build and publish
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_RELEASE: assets
+        run: |
+          url='${{ matrix.repository.url }}'
+          # get the part after the last '-' in the URL
+          language=${url##*-}
+
+          git clone "$url.git" .
+
+          cd ${{ matrix.repository.path || '.' }}
+
+          if [ ! -f src/scanner.c ]; then
+            clang -dynamiclib -o "libtree-sitter-$language.dylib" src/parser.c -Isrc -fPIC "-Wl,-exported_symbol,_tree_sitter_$language"
+          else
+            clang -dynamiclib -o "libtree-sitter-$language.dylib" src/parser.c src/scanner.c -Isrc -fPIC "-Wl,-exported_symbol,_tree_sitter_$language"
+          fi
+
+          gh release upload $GH_RELEASE "libtree-sitter-$language.dylib" --clobber -R ${{ github.repository }}
