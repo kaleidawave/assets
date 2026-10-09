@@ -15,7 +15,7 @@ jobs:
       max-parallel: 3
       matrix:
         repository:
-          - repository: https://github.com/kaleidawave/ezno
+          - repository: kaleidawave/ezno
             ref: parser-fixes
             profile: release
             name: ezno-feb-26
@@ -45,7 +45,8 @@ jobs:
         run: |
           FROM='target/${{ case(matrix.repository.profile == 'release', 'release', 'debug') }}/${{ matrix.repository.name }}'
           # TODO more
-          TO='${{ matrix.repository.name }}-${{ case(runner.arch == 'X86', 'x86_64', 'unknown') }}-${{ case(runner.os == 'Linux', 'unknown-linux', 'unknown') }}'
+          echo '${{ toJSON(runner) }}'
+          TO='${{ matrix.repository.name }}-${{ case(runner.arch == 'X64', 'x86_64', 'unknown') }}-${{ case(runner.os == 'Linux', 'unknown-linux', 'unknown') }}'
           LABEL="$TO"
           mv $FROM $TO
           gh release upload $RELEASE_TAG "$TO#$LABEL" --clobber -R ${{ github.repository }}
@@ -61,27 +62,28 @@ jobs:
       max-parallel: 3
       matrix:
         repository:
-          - url: https://github.com/PrestonKnopp/tree-sitter-gdscript
-          - url: https://github.com/tree-sitter/tree-sitter-rust
-          - url: https://github.com/tree-sitter/tree-sitter-go
-          - url: https://github.com/tree-sitter/tree-sitter-regex
-          - url: https://github.com/tree-sitter/tree-sitter-typescript
-            path: typescript
-          - url: https://github.com/tree-sitter-grammars/tree-sitter-zig
-          - url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
-          - url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
-            path: tree-sitter-markdown
+          # - url: https://github.com/PrestonKnopp/tree-sitter-gdscript
+          # - url: https://github.com/tree-sitter/tree-sitter-rust
+          # - url: https://github.com/tree-sitter/tree-sitter-go
+          # - url: https://github.com/tree-sitter/tree-sitter-regex
+          # - url: https://github.com/tree-sitter/tree-sitter-typescript
+          #   path: typescript
+          # - url: https://github.com/tree-sitter-grammars/tree-sitter-zig
+          # - url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
+          # - url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
+          #   path: tree-sitter-markdown
           - url: https://github.com/DerekStride/tree-sitter-sql
-          - url: https://github.com/tree-sitter/tree-sitter-python
-          - url: https://github.com/Julian/tree-sitter-lean
-          - url: https://github.com/tree-sitter/tree-sitter-html
-          - url: https://github.com/tree-sitter/tree-sitter-c
-          - url: https://github.com/tree-sitter/tree-sitter-cpp
-          - url: https://github.com/tree-sitter/tree-sitter-bash
-          - url: https://github.com/tree-sitter/tree-sitter-json
-          - url: https://github.com/tree-sitter/tree-sitter-css
-          - url: https://github.com/tree-sitter/tree-sitter-toml
-          - url: https://github.com/tree-sitter/tree-sitter-tsq
+            ref: gh-pages
+          # - url: https://github.com/tree-sitter/tree-sitter-python
+          # - url: https://github.com/Julian/tree-sitter-lean
+          # - url: https://github.com/tree-sitter/tree-sitter-html
+          # - url: https://github.com/tree-sitter/tree-sitter-c
+          # - url: https://github.com/tree-sitter/tree-sitter-cpp
+          # - url: https://github.com/tree-sitter/tree-sitter-bash
+          # - url: https://github.com/tree-sitter/tree-sitter-json
+          # - url: https://github.com/tree-sitter/tree-sitter-css
+          # - url: https://github.com/tree-sitter/tree-sitter-toml
+          # - url: https://github.com/tree-sitter/tree-sitter-tsq
 
     steps:
       - name: clone, build and publish
@@ -94,6 +96,11 @@ jobs:
           language=${url##*-}
 
           git clone "$url.git" .
+
+          # If on branch, change to that branch
+          if [[ -n '${{ matrix.repository.ref }}' ]]; then
+            git checkout -b ${{ matrix.repository.ref }} origin/${{ matrix.repository.ref }}
+          fi
 
           cd ${{ matrix.repository.path || '.' }}
 
