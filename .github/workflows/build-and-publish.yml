@@ -19,9 +19,10 @@ jobs:
             ref: parser-fixes
             profile: release
             name: ezno-feb-26
-          - repository: taiki-e/cargo-fuzz
-            ref: default-target
-            name: cargo-fuzz
+            binary_name: ezno
+          # - repository: taiki-e/cargo-fuzz
+          #   ref: default-target
+          #   name: cargo-fuzz
 
     env:
       DEFAULT_PROFILE: dev
@@ -43,7 +44,7 @@ jobs:
         shell: bash
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         run: |
-          FROM='target/${{ case(matrix.repository.profile == 'release', 'release', 'debug') }}/${{ matrix.repository.name }}'
+          FROM='target/${{ case(matrix.repository.profile == 'release', 'release', 'debug') }}/${{ matrix.repository.binary_name || matrix.repository.name }}'
           # TODO more
           echo '${{ toJSON(runner) }}'
           TO='${{ matrix.repository.name }}-${{ case(runner.arch == 'X64', 'x86_64', 'unknown') }}-${{ case(runner.os == 'Linux', 'unknown-linux', 'unknown') }}'
@@ -52,6 +53,9 @@ jobs:
           gh release upload $RELEASE_TAG "$TO#$LABEL" --clobber -R ${{ github.repository }}
 
   build-and-upload-languages:
+    # Built the majority now
+    if: false
+
     permissions: write-all
 
     # TODO for other targets
@@ -62,28 +66,28 @@ jobs:
       max-parallel: 3
       matrix:
         repository:
-          # - url: https://github.com/PrestonKnopp/tree-sitter-gdscript
-          # - url: https://github.com/tree-sitter/tree-sitter-rust
-          # - url: https://github.com/tree-sitter/tree-sitter-go
-          # - url: https://github.com/tree-sitter/tree-sitter-regex
-          # - url: https://github.com/tree-sitter/tree-sitter-typescript
-          #   path: typescript
-          # - url: https://github.com/tree-sitter-grammars/tree-sitter-zig
-          # - url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
-          # - url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
-          #   path: tree-sitter-markdown
+          - url: https://github.com/PrestonKnopp/tree-sitter-gdscript
+          - url: https://github.com/tree-sitter/tree-sitter-rust
+          - url: https://github.com/tree-sitter/tree-sitter-go
+          - url: https://github.com/tree-sitter/tree-sitter-regex
+          - url: https://github.com/tree-sitter/tree-sitter-typescript
+            path: typescript
+          - url: https://github.com/tree-sitter-grammars/tree-sitter-zig
+          - url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
+          - url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
+            path: tree-sitter-markdown
           - url: https://github.com/DerekStride/tree-sitter-sql
             ref: gh-pages
-          # - url: https://github.com/tree-sitter/tree-sitter-python
-          # - url: https://github.com/Julian/tree-sitter-lean
-          # - url: https://github.com/tree-sitter/tree-sitter-html
-          # - url: https://github.com/tree-sitter/tree-sitter-c
-          # - url: https://github.com/tree-sitter/tree-sitter-cpp
-          # - url: https://github.com/tree-sitter/tree-sitter-bash
-          # - url: https://github.com/tree-sitter/tree-sitter-json
-          # - url: https://github.com/tree-sitter/tree-sitter-css
-          # - url: https://github.com/tree-sitter/tree-sitter-toml
-          # - url: https://github.com/tree-sitter/tree-sitter-tsq
+          - url: https://github.com/tree-sitter/tree-sitter-python
+          - url: https://github.com/Julian/tree-sitter-lean
+          - url: https://github.com/tree-sitter/tree-sitter-html
+          - url: https://github.com/tree-sitter/tree-sitter-c
+          - url: https://github.com/tree-sitter/tree-sitter-cpp
+          - url: https://github.com/tree-sitter/tree-sitter-bash
+          - url: https://github.com/tree-sitter/tree-sitter-json
+          - url: https://github.com/tree-sitter/tree-sitter-css
+          - url: https://github.com/tree-sitter/tree-sitter-toml
+          - url: https://github.com/tree-sitter/tree-sitter-tsq
 
     steps:
       - name: clone, build and publish
